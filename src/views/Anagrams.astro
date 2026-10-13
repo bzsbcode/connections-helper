@@ -1,0 +1,191 @@
+---
+import Base from "../layouts/Base.astro";
+import { MAX_LETTERS } from "../lib/anagrams";
+import { NYT_STRANDS_URL, ui } from "../ui";
+
+const a = ui.anagrams;
+---
+
+<Base title={a.title} description={a.description} noindex>
+	<header class="frame grid gap-8 pt-14 pb-10 md:grid-cols-12 md:pt-24 md:pb-16">
+		<div class="space-y-5 md:col-span-7">
+			<p class="stagger label" style="--i:0">{a.wordList} · {a.wordCount}</p>
+			<h1 class="stagger text-headline font-extrabold font-stretch-semi-condensed" style="--i:1">{a.title}</h1>
+		</div>
+		<p class="stagger font-serif text-lede text-dim md:col-span-5 md:self-end max-w-[36ch]" style="--i:2">{a.intro}</p>
+	</header>
+
+	<section class="frame">
+		<noscript>
+			<p class="border-t border-fg pt-6 font-serif italic text-lg text-dim">{a.noscript}</p>
+		</noscript>
+		<div class="stagger grid gap-x-6 gap-y-3 border-t border-fg pt-6 md:grid-cols-12 [html:not(.js)_&]:hidden" style="--i:3">
+			<label for="letters" class="label md:col-span-2 md:pt-4">{a.input}</label>
+			<div class="space-y-3 md:col-span-10">
+				<input
+					id="letters"
+					type="text"
+					class="field text-3xl font-extrabold font-stretch-semi-condensed uppercase tracking-tight placeholder:normal-case placeholder:font-normal md:text-5xl"
+					placeholder={a.placeholder}
+					maxlength={MAX_LETTERS * 2}
+					autocomplete="off"
+					autocapitalize="characters"
+					autocorrect="off"
+					spellcheck="false"
+					enterkeyhint="search"
+					data-letters
+				/>
+				<div class="flex min-h-6 flex-wrap items-baseline gap-x-6 gap-y-2 text-sm" role="status" aria-live="polite" data-status>
+					<span class="text-dim">{a.hint}</span>
+				</div>
+			</div>
+		</div>
+
+		<div class="mt-10" data-results></div>
+	</section>
+
+	<section class="band mt-20 bg-band text-band-fg md:mt-28">
+		<div class="frame grid gap-8 py-16 md:grid-cols-12 md:py-24" data-reveal>
+			<div class="md:col-span-7 space-y-4">
+				<h2 class="font-serif italic text-4xl md:text-6xl leading-[1.05] tracking-[-0.02em]">{a.ctaTitle}</h2>
+				<p class="text-lg text-band-fg/80 max-w-[40ch]">{a.ctaText}</p>
+			</div>
+			<div class="md:col-span-4 md:col-start-9 md:self-end">
+				<a href={NYT_STRANDS_URL} class="block-btn w-full">
+					{a.ctaButton}<span aria-hidden="true">↗</span>
+				</a>
+			</div>
+		</div>
+	</section>
+</Base>
+
+<script>
+	import { findAnagrams, MIN_LENGTH, normalizeLetters, parseWordList, type AnagramResult } from "../lib/anagrams";
+	import { ui } from "../ui";
+
+	const a = ui.anagrams;
+	const input = document.querySelector<HTMLInputElement>("[data-letters]")!;
+	const status = document.querySelector<HTMLElement>("[data-status]")!;
+	const results = document.querySelector<HTMLElement>("[data-results]")!;
+
+	/** Very long groups (four-letter words from a dozen letters) are cut here until asked for. */
+	const GROUP_LIMIT = 120;
+
+	// The Workers types redeclare Element.append for HTMLRewriter, so DOM nodes go in through appendChild.
+	const add = (parent: Node, ...children: Node[]) => children.forEach((c) => parent.appendChild(c));
+
+	function make<K extends keyof HTMLElementTagNameMap>(tag: K, className = "", text?: string): HTMLElementTagNameMap[K] {
+		const node = document.createElement(tag);
+		if (className) node.className = className;
+		if (text !== undefined) node.textContent = text;
+		return node;
+	}
+
+	function setStatus(text: string, tone: "dim" | "fg" = "dim", action?: { label: string; run: () => void }) {
+		const span = make("span", tone === "dim" ? "text-dim" : "font-semibold", text);
+		status.replaceChildren(span);
+		if (action) {
+			const button = make("button", "ink-link font-semibold", action.label);
+			button.type = "button";
+			button.addEventListener("click", action.run);
+			add(status, button);
+		}
+	}
+
+	/** One ruled row: the word length as a big blue numeral, then the words. */
+	function row(length: number, heading: string, words: string[], big: boolean): HTMLElement {
+		const li = make("li", "grid grid-cols-12 gap-x-4 gap-y-3 border-b border-rule py-6 md:gap-x-6 md:py-8");
+		const num = make("p", "col-span-2 text-4xl font-light font-stretch-condensed tabular-nums leading-none text-blue md:text-6xl", String(length).padStart(2, "0"));
+		num.setAttribute("aria-hidden", "true");
+		const body = make("div", "col-span-10 space-y-3");
+		add(body, make("h3", "label", `${heading} · ${a.count(words.length)}`));
+		const list = make("ul", `flex flex-wrap gap-x-5 gap-y-2 font-extrabold font-stretch-semi-condensed uppercase tracking-tight ${big ? "text-3xl md:text-[2.6rem] leading-none" : "text-lg md:text-xl"}`);
+		const fill = (shown: string[]) => list.replaceChildren(...shown.map((w) => make("li", "", w)));
+		fill(words.slice(0, GROUP_LIMIT));
+		add(body, list);
+		if (words.length > GROUP_LIMIT) {
+			const more = make("button", "ink-link text-sm font-semibold", a.more(words.length - GROUP_LIMIT));
+			more.type = "button";
+			more.addEventListener("click", () => {
+				fill(words);
+				more.remove();
+			});
+			add(body, more);
+		}
+		add(li, num, body);
+		return li;
+	}
+
+	function render(r: AnagramResult) {
+		const total = r.exact.length + r.shorter.reduce((n, g) => n + g.words.length, 0);
+		if (r.letters.length < MIN_LENGTH) {
+			setStatus(a.hint);
+			results.replaceChildren();
+			return;
+		}
+		setStatus(total ? a.count(total) : a.none, total ? "fg" : "dim");
+		if (!total) {
+			results.replaceChildren();
+			return;
+		}
+		const list = make("ol", "border-t border-fg");
+		if (r.exact.length) add(list, row(r.letters.length, a.exact, r.exact, true));
+		else {
+			const li = make("li", "grid grid-cols-12 gap-x-4 border-b border-rule py-6 md:gap-x-6");
+			add(li, make("p", "col-span-10 col-start-3 font-serif italic text-lg text-dim", a.noExact));
+			add(list, li);
+		}
+		r.shorter.forEach((g) => add(list, row(g.length, `${g.length} ${a.letters}`, g.words, false)));
+		results.replaceChildren(list);
+	}
+
+	let words: string[] | null = null;
+	let loading: Promise<void> | null = null;
+
+	function load(): Promise<void> {
+		loading ??= fetch("/words/enable1.txt")
+			.then((res) => {
+				if (!res.ok) throw new Error(String(res.status));
+				return res.text();
+			})
+			.then((text) => {
+				words = parseWordList(text);
+			})
+			.catch(() => {
+				loading = null;
+				setStatus(a.loadError, "dim", { label: a.retry, run: () => void load().then(update) });
+			});
+		return loading;
+	}
+
+	let timer = 0;
+	function update() {
+		const letters = normalizeLetters(input.value);
+		// Keep the letters in the address bar, so a search can be bookmarked or shared.
+		const url = new URL(location.href);
+		if (letters) url.searchParams.set("letters", letters);
+		else url.searchParams.delete("letters");
+		history.replaceState(null, "", url);
+		if (!words) {
+			if (letters.length >= MIN_LENGTH) setStatus(a.loading);
+			load().then(() => words && update());
+			return;
+		}
+		render(findAnagrams(words, letters));
+	}
+
+	input.addEventListener("input", () => {
+		clearTimeout(timer);
+		timer = window.setTimeout(update, 120);
+	});
+	input.addEventListener("keydown", (e) => {
+		if (e.key === "Enter") {
+			clearTimeout(timer);
+			update();
+		}
+	});
+
+	input.value = new URLSearchParams(location.search).get("letters") ?? "";
+	// The list is the only thing on this page that needs loading, so it starts right away.
+	load().then(() => words && input.value && update());
+</script>
