@@ -1,0 +1,266 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ * Palette: blue and orange details (the two colours of the bzsb_code logo).
+ * Light: paper and navy ink, with solid blue bands.
+ * Dark (the default): near-black, sky-blue rules and accents, orange for actions.
+ * Green only ever marks "active".
+ */
+:root {
+	--bg: #f0eee8;
+	--fg: #0e1a3a;
+	--dim: #4b5675;
+	--rule: #0e1a3a2e;
+	--blue: #1f4fd1;
+	--band: #1c3aa9;
+	--band-fg: #f0eee8;
+	--band-edge: transparent;
+	--btn-bg: #0e1a3a;
+	--btn-fg: #f0eee8;
+	--btn-hover: #1f4fd1;
+	--signal: #c2410c;
+	--signal-inv: #ff8c42;
+	--go: #2f6b3a;
+}
+
+.dark {
+	--bg: #0a0a0c;
+	--fg: #f2f2f0;
+	--dim: #a3a3ad;
+	--rule: #38b6ff40;
+	--blue: #38b6ff;
+	--band: #111114;
+	--band-fg: #f2f2f0;
+	--band-edge: #38b6ff;
+	--btn-bg: #ff9a1f;
+	--btn-fg: #0a0a0c;
+	--btn-hover: #38b6ff;
+	--signal: #ff9a1f;
+	--signal-inv: #c2410c;
+	--go: #7fbf86;
+}
+
+@theme inline {
+	--color-bg: var(--bg);
+	--color-fg: var(--fg);
+	--color-dim: var(--dim);
+	--color-rule: var(--rule);
+	--color-blue: var(--blue);
+	--color-band: var(--band);
+	--color-band-fg: var(--band-fg);
+	--color-signal: var(--signal);
+	--color-go: var(--go);
+}
+
+@theme {
+	/* Archivo carries a width axis: semi-condensed for headings, normal for text. Source Serif 4 for ledes and italic accents. */
+	--font-sans: "Archivo Variable", ui-sans-serif, system-ui, sans-serif;
+	--font-serif: "Source Serif 4 Variable", ui-serif, Georgia, serif;
+
+	/* Type scale: small labels → body → lede → headline → display. */
+	--text-label: 0.75rem;
+	--text-label--letter-spacing: 0.12em;
+	--text-label--line-height: 1.2;
+	--text-lede: clamp(1.25rem, 1.05rem + 0.8vw, 1.625rem);
+	--text-lede--line-height: 1.4;
+	--text-lede--letter-spacing: -0.015em;
+	--text-headline: clamp(2.5rem, 1.6rem + 4.2vw, 5.5rem);
+	--text-headline--line-height: 0.95;
+	--text-headline--letter-spacing: -0.02em;
+	--text-numeral: clamp(3.5rem, 2rem + 6vw, 7.5rem);
+	--text-numeral--line-height: 0.8;
+	--text-numeral--letter-spacing: -0.06em;
+
+	--ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@layer base {
+	*,
+	::after,
+	::before {
+		border-color: var(--rule);
+	}
+	html {
+		color-scheme: light;
+		-webkit-text-size-adjust: 100%;
+	}
+	html.dark {
+		color-scheme: dark;
+	}
+	body {
+		background: var(--bg);
+		color: var(--fg);
+		font-family: var(--font-sans);
+		-webkit-font-smoothing: antialiased;
+		text-rendering: optimizeLegibility;
+	}
+	::selection {
+		background: var(--blue);
+		color: var(--bg);
+	}
+	:focus-visible {
+		outline: 2px solid var(--signal);
+		outline-offset: 3px;
+	}
+}
+
+@layer components {
+	/* Page frame: one grid, one gutter. */
+	.frame {
+		width: 100%;
+		max-width: 88rem;
+		margin-inline: auto;
+		padding-inline: 1rem;
+	}
+	@media (min-width: 768px) {
+		.frame {
+			padding-inline: 2.5rem;
+		}
+	}
+
+	/* Small-caps style label used for metadata. */
+	.label {
+		font-size: var(--text-label);
+		letter-spacing: var(--text-label--letter-spacing);
+		line-height: var(--text-label--line-height);
+		text-transform: uppercase;
+		font-weight: 600;
+		color: var(--dim);
+	}
+
+	/* Text link: a blue rule draws in from the left. */
+	.ink-link {
+		background: linear-gradient(var(--blue), var(--blue)) left bottom / 0 2px no-repeat,
+			linear-gradient(currentColor, currentColor) left bottom / 100% 1px no-repeat;
+		padding-bottom: 0.1em;
+		transition: background-size 0.45s var(--ease-out-expo), color 0.2s;
+	}
+	.ink-link:hover,
+	.ink-link:focus-visible {
+		background-size: 100% 2px, 100% 1px;
+		color: var(--blue);
+	}
+	/* The light theme's bands are solid blue, so links there swap to orange. */
+	html:not(.dark) .band .ink-link {
+		background-image: linear-gradient(var(--signal-inv), var(--signal-inv)), linear-gradient(currentColor, currentColor);
+	}
+	html:not(.dark) .band .ink-link:hover,
+	html:not(.dark) .band .ink-link:focus-visible {
+		color: var(--band-fg);
+	}
+	.ink-link .arrow {
+		display: inline-block;
+		transition: transform 0.45s var(--ease-out-expo);
+	}
+	.ink-link:hover .arrow,
+	.ink-link:focus-visible .arrow {
+		transform: translateX(0.25em);
+	}
+
+	/* Hard-edged block button that sets its own shadow on hover. */
+	.block-btn {
+		display: inline-flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 1.5rem;
+		min-height: 3.25rem;
+		padding: 0.75rem 1.25rem;
+		background: var(--btn-bg);
+		color: var(--btn-fg);
+		font-weight: 600;
+		transition: transform 0.25s var(--ease-out-expo), box-shadow 0.25s var(--ease-out-expo), background 0.2s;
+	}
+	.block-btn:hover,
+	.block-btn:focus-visible {
+		background: var(--btn-hover);
+		transform: translate(3px, -3px);
+		box-shadow: -3px 3px 0 var(--fg);
+	}
+	/* Light theme: inside a solid blue band the button flips to paper, and goes orange on hover. */
+	html:not(.dark) .band .block-btn {
+		background: var(--band-fg);
+		color: var(--band);
+	}
+	html:not(.dark) .band .block-btn:hover,
+	html:not(.dark) .band .block-btn:focus-visible {
+		background: var(--signal-inv);
+		color: #0e1a3a;
+		box-shadow: 3px 3px 0 var(--band-fg);
+	}
+
+	/* Dark theme: bands are raised black edged with blue rules. */
+	.band {
+		border-block: 1px solid var(--band-edge);
+	}
+	.block-btn:active {
+		transform: none;
+		box-shadow: none;
+	}
+	.block-btn:disabled {
+		opacity: 0.6;
+		pointer-events: none;
+	}
+
+	/* Underline-only form fields, like a ruled form. */
+	.field {
+		width: 100%;
+		min-width: 0;
+		background: transparent;
+		border: 0;
+		border-bottom: 1px solid var(--fg);
+		padding: 0.6rem 0;
+		font-size: 1.0625rem;
+		border-radius: 0;
+		transition: border-color 0.2s, box-shadow 0.2s;
+	}
+	.field::placeholder {
+		color: var(--dim);
+		opacity: 0.8;
+	}
+	.field:focus-visible {
+		outline: none;
+		border-bottom-color: var(--signal);
+		box-shadow: 0 2px 0 var(--signal);
+	}
+}
+
+/* Motion. Content stays visible unless JS has loaded (html.js). */
+@keyframes rise {
+	from {
+		opacity: 0;
+		transform: translateY(0.6em);
+	}
+}
+
+@media (prefers-reduced-motion: no-preference) {
+	/* Hold the intro animations until the fonts are in (html.fonts-ready), so text never swaps mid-animation. */
+	.js:not(.fonts-ready) .stagger {
+		animation-play-state: paused;
+	}
+	.js .stagger {
+		animation: rise 0.9s var(--ease-out-expo) both;
+		animation-delay: calc(var(--i, 0) * 90ms + 80ms);
+	}
+	.js [data-reveal] {
+		opacity: 0;
+		transform: translateY(1.5rem);
+		transition: opacity 0.9s var(--ease-out-expo), transform 0.9s var(--ease-out-expo);
+		transition-delay: calc(var(--i, 0) * 80ms);
+	}
+	.js [data-reveal].is-in {
+		opacity: 1;
+		transform: none;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	*,
+	::before,
+	::after {
+		transition-duration: 0.01ms !important;
+		animation-duration: 0.01ms !important;
+		scroll-behavior: auto !important;
+	}
+}

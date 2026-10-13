@@ -1,0 +1,112 @@
+---
+// Fonts are served from this site (not Google Fonts) so no other domains block the first paint.
+import "@fontsource-variable/archivo/wdth.css";
+import "@fontsource-variable/source-serif-4/wght.css";
+import "@fontsource-variable/source-serif-4/wght-italic.css";
+import archivoLatin from "@fontsource-variable/archivo/files/archivo-latin-wdth-normal.woff2?url";
+import serifLatin from "@fontsource-variable/source-serif-4/files/source-serif-4-latin-wght-normal.woff2?url";
+import serifItalicLatin from "@fontsource-variable/source-serif-4/files/source-serif-4-latin-wght-italic.woff2?url";
+import "../styles/global.css";
+import Navbar from "../components/Navbar.astro";
+import Footer from "../components/Footer.astro";
+import { ui } from "../ui";
+
+interface Props {
+	title?: string;
+	/** Meta description; defaults to the site-wide one. */
+	description?: string;
+	/** Keep the page out of search results. */
+	noindex?: boolean;
+}
+
+const { title, description, noindex = false } = Astro.props;
+const pageTitle = title ? `${title} | ${ui.siteTitle}` : ui.siteTitle;
+const pageDescription = description ?? ui.description;
+const canonical = new URL(Astro.url.pathname, Astro.site);
+---
+
+<!doctype html>
+<html lang={ui.htmlLang} class="dark">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>{pageTitle}</title>
+		<meta name="description" content={pageDescription} />
+		<link rel="icon" href="/favicon.ico" sizes="any" />
+		{noindex ? <meta name="robots" content="noindex" /> : <link rel="canonical" href={canonical} />}
+		<meta property="og:type" content="website" />
+		<meta property="og:site_name" content={ui.siteTitle} />
+		<meta property="og:title" content={pageTitle} />
+		<meta property="og:description" content={pageDescription} />
+		<meta property="og:url" content={canonical} />
+		<meta property="og:locale" content="en_GB" />
+		<meta property="og:image" content={new URL("/og.png", Astro.site)} />
+		<meta property="og:image:width" content="1200" />
+		<meta property="og:image:height" content="630" />
+		<meta property="og:image:alt" content="bzsb code" />
+		<meta name="twitter:card" content="summary_large_image" />
+		<link rel="preload" href={archivoLatin} as="font" type="font/woff2" crossorigin />
+		<link rel="preload" href={serifLatin} as="font" type="font/woff2" crossorigin />
+		<link rel="preload" href={serifItalicLatin} as="font" type="font/woff2" crossorigin />
+		<script is:inline>
+			(() => {
+				const root = document.documentElement;
+				root.classList.add("js");
+				// Start the intro animations only once the fonts are loaded (or after 2s, whichever is first).
+				const ready = () => root.classList.add("fonts-ready");
+				if (document.fonts && document.fonts.load) {
+					Promise.all(['1em "Archivo Variable"', '1em "Source Serif 4 Variable"'].map((f) => document.fonts.load(f))).then(ready, ready);
+					setTimeout(ready, 2000);
+				} else ready();
+				let pref = "dark";
+				try {
+					pref = localStorage.getItem("theme") || "dark";
+				} catch {}
+				const dark = pref === "dark" || (pref === "system" && matchMedia("(prefers-color-scheme: dark)").matches);
+				document.documentElement.classList.toggle("dark", dark);
+			})();
+		</script>
+	</head>
+	<body class="min-h-svh flex flex-col">
+		<a href="#main" class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[60] focus:bg-fg focus:px-4 focus:py-3 focus:text-bg">{ui.menu.skip}</a>
+		<Navbar />
+		<main id="main" class="flex-1">
+			<slot />
+		</main>
+		<Footer />
+	</body>
+</html>
+
+<script>
+	// Live Budapest clock for every [data-clock]: the puzzle date follows Budapest time.
+	const clocks = document.querySelectorAll<HTMLElement>("[data-clock]");
+	if (clocks.length) {
+		const fmt = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Budapest", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });
+		const tick = () => {
+			const now = fmt.format(new Date());
+			clocks.forEach((c) => {
+				c.textContent = c.dataset.clock === "short" ? now.slice(0, 5) : now;
+			});
+		};
+		tick();
+		setInterval(tick, 1000);
+	}
+
+	// Scroll reveals.
+	const targets = document.querySelectorAll("[data-reveal]");
+	if ("IntersectionObserver" in window) {
+		const io = new IntersectionObserver(
+			(entries) =>
+				entries.forEach((e) => {
+					if (e.isIntersecting) {
+						e.target.classList.add("is-in");
+						io.unobserve(e.target);
+					}
+				}),
+			{ rootMargin: "0px 0px -8% 0px" },
+		);
+		targets.forEach((t) => io.observe(t));
+	} else {
+		targets.forEach((t) => t.classList.add("is-in"));
+	}
+</script>

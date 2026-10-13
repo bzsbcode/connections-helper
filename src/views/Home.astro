@@ -1,0 +1,292 @@
+---
+import Base from "../layouts/Base.astro";
+import { NYT_GAME_URL, ui } from "../ui";
+
+const h = ui.home;
+---
+
+<Base noindex>
+	<header class="frame grid gap-8 pt-14 pb-10 md:grid-cols-12 md:pt-24 md:pb-16">
+		<div class="space-y-5 md:col-span-7">
+			<p class="stagger label" style="--i:0"><time data-puzzle-date></time></p>
+			<h1 class="stagger text-headline font-extrabold font-stretch-semi-condensed" style="--i:1">
+				{h.title}<sup class="ml-2 align-super text-[0.32em] font-semibold tracking-normal text-signal tabular-nums" data-puzzle-number></sup>
+			</h1>
+		</div>
+		<p class="stagger font-serif text-lede text-dim md:col-span-5 md:self-end max-w-[36ch]" style="--i:2">{h.intro}</p>
+	</header>
+
+	{/* The static page ships in its error state; the worker removes this once the board is in (src/worker/home-page.ts). */}
+	<section data-unavailable class="frame">
+		<div class="grid gap-8 border-t border-fg pt-8 md:grid-cols-12" role="alert">
+			<p class="text-numeral font-light font-stretch-condensed tabular-nums text-blue md:col-span-2" aria-hidden="true">!</p>
+			<div class="space-y-5 md:col-span-7">
+				<h2 class="text-3xl md:text-[2.8rem] font-extrabold font-stretch-semi-condensed tracking-tight leading-[1.02] max-w-[18ch]">{h.errorTitle}</h2>
+				<p class="text-[1.0625rem] leading-relaxed text-dim max-w-[52ch]">{h.errorText}</p>
+				<div class="flex flex-col gap-4 pt-2 sm:flex-row sm:items-center sm:gap-8">
+					<a href="/" class="block-btn sm:min-w-48">{h.retry}<span aria-hidden="true">↻</span></a>
+					<a href={NYT_GAME_URL} class="ink-link self-start sm:self-auto font-semibold">{h.ctaButton} <span class="arrow" aria-hidden="true">↗</span></a>
+				</div>
+			</div>
+		</div>
+	</section>
+
+	<div data-ready hidden>
+		<p data-stale hidden class="frame pb-8">
+			<span class="block border-l-2 border-signal pl-4 font-serif italic text-lg text-dim">{h.stale}</span>
+		</p>
+
+		<div class="frame grid gap-12 md:grid-cols-12 md:gap-6">
+			<section class="md:col-span-5" aria-labelledby="board-title">
+				<div class="space-y-3 md:sticky md:top-24">
+					<h2 id="board-title" class="label">{h.board}</h2>
+					<ol data-board class="stagger grid grid-cols-4 border-l border-t border-rule" style="--i:3"></ol>
+					<p class="font-serif italic text-dim [html:not(.js)_&]:hidden">{h.boardHint}</p>
+				</div>
+			</section>
+
+			<section class="md:col-span-7 md:col-start-6 lg:col-span-6 lg:col-start-7" aria-labelledby="meanings-title">
+				<h2 id="meanings-title" class="label">{h.meanings}</h2>
+				<div class="mt-3 flex flex-col gap-4 border-b border-fg pb-3 sm:flex-row sm:items-end sm:gap-8 [html:not(.js)_&]:hidden">
+					<label class="block flex-1">
+						<span class="sr-only">{h.search}</span>
+						<input type="search" class="field" placeholder={h.searchPlaceholder} autocomplete="off" spellcheck="false" enterkeyhint="go" data-search />
+					</label>
+					<div class="flex gap-6 pb-2 text-sm font-semibold">
+						<button type="button" class="ink-link" data-expand-all>{h.expandAll}</button>
+						<button type="button" class="ink-link" data-collapse-all>{h.collapseAll}</button>
+					</div>
+				</div>
+				<ol data-entries class="border-t border-fg [.js_&]:border-t-0"></ol>
+				<p data-no-match hidden role="status" class="border-b border-rule py-8 font-serif italic text-lg text-dim">{h.noMatch}</p>
+			</section>
+		</div>
+	</div>
+
+	<section class="band mt-20 bg-band text-band-fg md:mt-28">
+		<div class="frame grid gap-8 py-16 md:grid-cols-12 md:py-24" data-reveal>
+			<div class="md:col-span-7 space-y-4">
+				<h2 class="font-serif italic text-4xl md:text-6xl leading-[1.05] tracking-[-0.02em]">{h.ctaTitle}</h2>
+				<p class="text-lg text-band-fg/80 max-w-[40ch]">{h.ctaText}</p>
+			</div>
+			<div class="md:col-span-4 md:col-start-9 md:self-end">
+				<a href={NYT_GAME_URL} class="block-btn w-full">
+					{h.ctaButton}<span aria-hidden="true">↗</span>
+				</a>
+			</div>
+		</div>
+	</section>
+</Base>
+
+<script>
+	import type { SenseGroup, WordDefinitions } from "../types";
+	import { ui, wiktionaryUrl } from "../ui";
+
+	const h = ui.home;
+	const entries = [...document.querySelectorAll<HTMLElement>("[data-entry]")];
+	const cells = [...document.querySelectorAll<HTMLAnchorElement>("[data-jump]")];
+	const search = document.querySelector<HTMLInputElement>("[data-search]");
+	const noMatch = document.querySelector<HTMLElement>("[data-no-match]");
+	const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)");
+
+	type State = "idle" | "loading" | "loaded";
+	const states = new Map<HTMLElement, State>();
+
+	const parts = (entry: HTMLElement) => ({
+		word: entry.dataset.word ?? "",
+		button: entry.querySelector<HTMLButtonElement>("[data-toggle]")!,
+		panel: entry.querySelector<HTMLElement>("[data-panel]")!,
+	});
+
+	// The Workers types redeclare Element.append for HTMLRewriter, so DOM nodes go in through appendChild.
+	const add = (parent: Node, ...children: Node[]) => children.forEach((c) => parent.appendChild(c));
+
+	function make<K extends keyof HTMLElementTagNameMap>(tag: K, className = "", text?: string): HTMLElementTagNameMap[K] {
+		const node = document.createElement(tag);
+		if (className) node.className = className;
+		if (text !== undefined) node.textContent = text;
+		return node;
+	}
+
+	/** Panels line up with the word, past the number column. */
+	function shell(): [HTMLElement, HTMLElement] {
+		const outer = make("div", "grid grid-cols-12 gap-x-4 pb-8 md:pb-10");
+		const inner = make("div", "col-span-12 space-y-8 sm:col-span-10 sm:col-start-3");
+		add(outer, inner);
+		return [outer, inner];
+	}
+
+	function lookUpLink(word: string): HTMLElement {
+		const p = make("p", "text-sm font-semibold");
+		const a = make("a", "ink-link", `${h.lookUp} `);
+		a.href = wiktionaryUrl(word);
+		a.target = "_blank";
+		a.rel = "noreferrer";
+		const arrow = make("span", "arrow", "↗");
+		arrow.setAttribute("aria-hidden", "true");
+		add(a, arrow);
+		add(p, a);
+		return p;
+	}
+
+	function skeleton(): HTMLElement {
+		const [outer, inner] = shell();
+		inner.setAttribute("role", "status");
+		add(inner, make("span", "sr-only", h.loading));
+		const bar = (w: string) => {
+			const b = make("div", `h-3 bg-rule animate-pulse motion-reduce:animate-none ${w}`);
+			b.setAttribute("aria-hidden", "true");
+			return b;
+		};
+		for (const widths of [["w-24", "w-full", "w-4/5"], ["w-20", "w-11/12", "w-3/5"]]) {
+			const block = make("div", "space-y-3 border-t border-rule pt-4");
+			widths.forEach((w) => add(block, bar(w)));
+			add(inner, block);
+		}
+		return outer;
+	}
+
+	function group(g: SenseGroup, word: string): HTMLElement {
+		const section = make("section");
+		const heading = make("h4", "flex flex-wrap items-baseline gap-x-3 border-b border-rule pb-2 font-serif italic text-xl text-dim", g.partOfSpeech);
+		// Show the headword when it isn't the board word itself: "proper noun · Mars", "noun · cup".
+		if (g.term.toLowerCase() !== word.toLowerCase() || g.term !== g.term.toLowerCase()) add(heading, make("span", "label not-italic text-blue", g.term));
+		const list = make("ol", "mt-4 space-y-5");
+		g.senses.forEach((s, i) => {
+			const li = make("li", "grid grid-cols-[2rem_1fr] gap-x-2");
+			add(li, make("span", "pt-0.5 text-sm font-semibold tabular-nums text-blue", String(i + 1).padStart(2, "0")));
+			const body = make("div", "max-w-[52ch] space-y-1.5");
+			add(body, make("p", "text-[1.0625rem] leading-relaxed", s.text));
+			if (s.example) add(body, make("p", "font-serif italic text-dim", `“${s.example}”`));
+			add(body, make("p", "label", s.sources.join(" · ")));
+			add(li, body);
+			add(list, li);
+		});
+		add(section, heading, list);
+		return section;
+	}
+
+	function render(entry: HTMLElement, data: WordDefinitions) {
+		// Nothing found because every source failed isn't "no definition": offer a retry instead.
+		if (!data.groups.length && !data.complete) return renderError(entry);
+		const { word, panel } = parts(entry);
+		const [outer, inner] = shell();
+		if (!data.groups.length) add(inner, make("p", "font-serif italic text-lg text-dim", h.notFound));
+		data.groups.forEach((g) => add(inner, group(g, word)));
+		if (!data.complete) add(inner, make("p", "border-l-2 border-signal pl-3 text-sm text-dim", h.incomplete));
+		add(inner, lookUpLink(word));
+		panel.replaceChildren(outer);
+	}
+
+	function renderError(entry: HTMLElement) {
+		const { word, panel } = parts(entry);
+		const [outer, inner] = shell();
+		inner.setAttribute("role", "alert");
+		const row = make("div", "flex flex-wrap items-baseline gap-x-6 gap-y-3");
+		add(row, make("p", "font-serif italic text-lg text-dim", h.loadError));
+		const retry = make("button", "ink-link text-sm font-semibold", h.retry);
+		retry.type = "button";
+		retry.addEventListener("click", () => {
+			states.set(entry, "idle");
+			schedule(entry);
+		});
+		add(row, retry);
+		add(inner, row, lookUpLink(word));
+		panel.replaceChildren(outer);
+	}
+
+	async function load(entry: HTMLElement) {
+		const { word, panel } = parts(entry);
+		panel.replaceChildren(skeleton());
+		try {
+			const res = await fetch(`/api/define?word=${encodeURIComponent(word)}`, { headers: { Accept: "application/json" } });
+			if (!res.ok) throw new Error(String(res.status));
+			const data = (await res.json()) as WordDefinitions;
+			render(entry, data);
+			states.set(entry, data.groups.length || data.complete ? "loaded" : "idle");
+		} catch {
+			renderError(entry);
+			states.set(entry, "idle");
+		}
+	}
+
+	// "Expand all" opens 16 rows at once; three lookups at a time spares the dictionaries' rate limits.
+	const queue: HTMLElement[] = [];
+	let active = 0;
+	function schedule(entry: HTMLElement) {
+		if ((states.get(entry) ?? "idle") !== "idle") return;
+		states.set(entry, "loading");
+		parts(entry).panel.replaceChildren(skeleton());
+		queue.push(entry);
+		pump();
+	}
+	function pump() {
+		while (active < 3 && queue.length) {
+			const next = queue.shift()!;
+			active++;
+			load(next).finally(() => {
+				active--;
+				pump();
+			});
+		}
+	}
+
+	function setOpen(entry: HTMLElement, open: boolean) {
+		const { button, panel } = parts(entry);
+		button.setAttribute("aria-expanded", String(open));
+		panel.hidden = !open;
+		if (open) schedule(entry);
+	}
+
+	function jumpTo(entry: HTMLElement) {
+		if (entry.hidden && search) {
+			search.value = "";
+			filter("");
+		}
+		setOpen(entry, true);
+		entry.scrollIntoView({ behavior: reduceMotion.matches ? "auto" : "smooth", block: "start" });
+		parts(entry).button.focus({ preventScroll: true });
+		history.replaceState(null, "", `#${entry.id}`);
+	}
+
+	const norm = (s: string) => s.trim().toLowerCase().replace(/\s+/g, " ");
+
+	function filter(q: string): HTMLElement[] {
+		const query = norm(q);
+		const matches = entries.filter((e) => norm(e.dataset.word ?? "").includes(query));
+		entries.forEach((e) => (e.hidden = !matches.includes(e)));
+		cells.forEach((c, i) => c.classList.toggle("opacity-30", Boolean(query) && !matches.includes(entries[i])));
+		if (noMatch) noMatch.hidden = matches.length > 0;
+		return matches;
+	}
+
+	entries.forEach((entry) => {
+		const { button } = parts(entry);
+		button.disabled = false;
+		button.addEventListener("click", () => setOpen(entry, button.getAttribute("aria-expanded") !== "true"));
+	});
+
+	cells.forEach((cell) =>
+		cell.addEventListener("click", (e) => {
+			const entry = document.getElementById(`w-${cell.dataset.jump}`);
+			if (!entry) return;
+			e.preventDefault();
+			jumpTo(entry);
+		}),
+	);
+
+	document.querySelector("[data-expand-all]")?.addEventListener("click", () => entries.filter((e) => !e.hidden).forEach((e) => setOpen(e, true)));
+	document.querySelector("[data-collapse-all]")?.addEventListener("click", () => entries.forEach((e) => setOpen(e, false)));
+
+	search?.addEventListener("input", () => filter(search.value));
+	search?.addEventListener("keydown", (e) => {
+		if (e.key !== "Enter") return;
+		e.preventDefault();
+		const first = filter(search.value)[0];
+		if (first) jumpTo(first);
+	});
+
+	// A shared link to a word (#w-07) opens it.
+	const target = /^#w-\d{2}$/.test(location.hash) ? document.getElementById(location.hash.slice(1)) : null;
+	if (target && entries.includes(target)) setOpen(target, true);
+</script>

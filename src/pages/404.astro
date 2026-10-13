@@ -1,0 +1,18 @@
+---
+import Base from "../layouts/Base.astro";
+import { ui } from "../ui";
+---
+
+<Base title="404" noindex>
+	<section class="frame grid min-h-[calc(100svh-9rem)] content-center gap-10 py-16 md:grid-cols-12">
+		<p class="stagger md:col-span-6 text-[clamp(7rem,30vw,20rem)] font-extrabold font-stretch-condensed leading-[0.8] tracking-[-0.05em] tabular-nums" style="--i:0" aria-hidden="true">
+			4<span class="text-blue">0</span>4
+		</p>
+		<div class="md:col-span-5 md:col-start-8 md:self-end space-y-6 border-t border-fg pt-6">
+			<h1 class="stagger text-3xl md:text-4xl font-extrabold tracking-tight leading-tight" style="--i:1">{ui.notFound.title}</h1>
+			<div class="stagger" style="--i:2">
+				<a href="/" class="block-btn sm:min-w-48">{ui.notFound.home}<span aria-hidden="true">→</span></a>
+			</div>
+		</div>
+	</section>
+</Base>

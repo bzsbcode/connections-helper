@@ -1,0 +1,35 @@
+{
+  "permissions": {
+    "defaultMode": "acceptEdits",
+    "allow": [
+      "PowerShell(npm run build 2>&1)",
+      "PowerShell(npm test)",
+      "Edit",
+      "Write",
+      "Read",
+      "Glob",
+      "Grep",
+      "PowerShell",
+      "Bash",
+      "WebFetch",
+      "WebSearch"
+    ],
+    "deny": [
+      "PowerShell(Remove-Item -Recurse *)",
+      "PowerShell(rm -r *)",
+      "PowerShell(git push --force *)",
+      "PowerShell(git reset --hard *)",
+      "Bash(rm -rf *)",
+      "Bash(git push --force *)",
+      "Bash(git reset --hard *)"
+    ],
+    "ask": [
+      "PowerShell(npm run deploy *)",
+      "PowerShell(npx wrangler deploy *)",
+      "PowerShell(wrangler deploy *)",
+      "Bash(npm run deploy *)",
+      "Bash(npx wrangler deploy *)",
+      "Bash(wrangler deploy *)"
+    ]
+  }
+}

@@ -1,0 +1,18 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "connections-helper",
+	"main": "src/worker/index.ts",
+	"compatibility_date": "2026-10-01",
+	"assets": {
+		"directory": "./dist",
+		"binding": "ASSETS",
+		"html_handling": "auto-trailing-slash",
+		"not_found_handling": "404-page",
+		// The worker fills the home page with today's words and serves the JSON API.
+		"run_worker_first": ["/", "/index.html", "/api/*"]
+	},
+	// Puzzle and definition cache. No id needed: `wrangler deploy` creates the
+	// namespace on first deploy and writes nothing back to this file.
+	"kv_namespaces": [{ "binding": "CACHE" }],
+	"observability": { "enabled": true }
+}

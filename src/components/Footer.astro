@@ -1,0 +1,25 @@
+---
+import { ui } from "../ui";
+
+const f = ui.footer;
+---
+
+<footer class="border-t border-rule text-sm text-dim">
+	<div class="frame grid gap-4 py-6 md:grid-cols-12 md:items-baseline md:gap-6">
+		<div class="space-y-1 md:col-span-7">
+			<p class="text-fg">{f.unofficial}</p>
+			{/* Explicit spaces: compressed HTML drops the line breaks between the links. */}
+			<p>
+				{f.credits}{" "}<a href="https://dictionaryapi.dev" class="ink-link text-fg">{f.freeDictionary}</a>{" "}{f.and}{" "}<a href="https://en.wiktionary.org" class="ink-link text-fg">{f.wiktionary}</a>{" "}<a href="https://creativecommons.org/licenses/by-sa/4.0/" class="ink-link">{f.license}</a>.
+			</p>
+		</div>
+		<p class="flex items-baseline gap-2 md:col-span-3">
+			<span class="label">{f.localTime}</span>
+			<span data-clock class="font-semibold tabular-nums text-fg">--:--:--</span>
+		</p>
+		<p class="flex items-baseline gap-4 md:col-span-2 md:justify-self-end">
+			<span>{f.rights}</span>
+			<a href="https://bzsb.eu" class="ink-link text-fg">{f.portfolio}</a>
+		</p>
+	</div>
+</footer>
