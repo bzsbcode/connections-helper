@@ -1,0 +1,31 @@
+[
+	{
+		"word": "hitch",
+		"phonetic": "/hɪt͡ʃ/",
+		"phonetics": [{ "text": "/hɪt͡ʃ/", "audio": "" }],
+		"meanings": [
+			{
+				"partOfSpeech": "noun",
+				"definitions": [
+					{ "definition": "A sudden pull.", "synonyms": [], "antonyms": [] },
+					{ "definition": "Any of various knots used to attach a rope to an object other than another rope.", "synonyms": [], "antonyms": [] },
+					{ "definition": "A problem, delay, or source of difficulty.", "synonyms": [], "antonyms": [], "example": "The banquet went off without a hitch." },
+					{ "definition": "A free ride in a passing vehicle; a lift.", "synonyms": ["lift", "ride"], "antonyms": [] }
+				],
+				"synonyms": [],
+				"antonyms": []
+			},
+			{
+				"partOfSpeech": "verb",
+				"definitions": [
+					{ "definition": "To attach, tie or fasten.", "synonyms": [], "antonyms": [], "example": "Can you hitch the trailer to the truck?" },
+					{ "definition": "To marry oneself to; especially to get hitched.", "synonyms": [], "antonyms": [] }
+				],
+				"synonyms": [],
+				"antonyms": []
+			}
+		],
+		"license": { "name": "CC BY-SA 3.0", "url": "https://creativecommons.org/licenses/by-sa/3.0" },
+		"sourceUrls": ["https://en.wiktionary.org/wiki/hitch"]
+	}
+]

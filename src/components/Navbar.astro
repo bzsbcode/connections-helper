@@ -1,0 +1,99 @@
+---
+import FullLogo from "./FullLogo.astro";
+import { ui } from "../ui";
+
+const themes = [
+	{ id: "light", label: ui.menu.light },
+	{ id: "dark", label: ui.menu.dark },
+	{ id: "system", label: ui.menu.system },
+];
+const chip =
+	"flex-1 border border-fg/30 px-2 py-1.5 text-center text-sm font-medium transition-colors hover:border-fg hover:bg-fg hover:text-bg";
+---
+
+<header class="sticky top-0 z-50 border-b border-rule bg-bg">
+	<nav class="frame flex h-16 items-center justify-between gap-6">
+		<a href="/" class="group flex items-center gap-3">
+			<FullLogo id="nav-logo" class="h-12 w-auto transition-transform duration-300 group-hover:scale-105" />
+			<span class="label hidden sm:inline">{ui.navTitle}</span>
+		</a>
+
+		<div class="relative" data-menu>
+			<button
+				type="button"
+				aria-haspopup="menu"
+				aria-expanded="false"
+				aria-label={ui.menu.open}
+				data-menu-trigger
+				class="inline-flex h-10 items-center gap-2 border border-fg px-3 text-sm font-semibold transition-colors hover:bg-fg hover:text-bg aria-expanded:bg-fg aria-expanded:text-bg"
+			>
+				<span>{ui.menu.open}</span>
+				<svg data-icon-open xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="square" aria-hidden="true"><path d="M4 8h16M4 16h16"></path></svg>
+				<svg data-icon-close class="hidden" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="square" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"></path></svg>
+			</button>
+			<div role="menu" data-menu-panel hidden class="absolute right-0 top-full mt-3 z-50 w-64 border border-fg bg-bg p-1.5 text-fg shadow-[5px_5px_0_var(--fg)]">
+				<p class="label px-3 pt-2 pb-2">{ui.menu.theme}</p>
+				<div class="flex gap-1 px-1 pb-1">
+					{
+						themes.map((th) => (
+							<button type="button" role="menuitemradio" aria-checked="false" data-theme-option={th.id} class:list={[chip, "aria-checked:border-fg aria-checked:bg-fg aria-checked:text-bg"]}>
+								{th.label}
+							</button>
+						))
+					}
+				</div>
+			</div>
+		</div>
+	</nav>
+</header>
+
+<script>
+	const root = document.querySelector<HTMLElement>("[data-menu]")!;
+	const trigger = root.querySelector<HTMLButtonElement>("[data-menu-trigger]")!;
+	const panel = root.querySelector<HTMLElement>("[data-menu-panel]")!;
+	const iconOpen = trigger.querySelector("[data-icon-open]")!;
+	const iconClose = trigger.querySelector("[data-icon-close]")!;
+
+	function setOpen(open: boolean) {
+		panel.hidden = !open;
+		trigger.setAttribute("aria-expanded", String(open));
+		iconOpen.classList.toggle("hidden", open);
+		iconClose.classList.toggle("hidden", !open);
+	}
+
+	trigger.addEventListener("click", () => setOpen(Boolean(panel.hidden)));
+	document.addEventListener("click", (e) => {
+		if (!panel.hidden && !root.contains(e.target as Node)) setOpen(false);
+	});
+	document.addEventListener("keydown", (e) => {
+		if (e.key === "Escape" && !panel.hidden) {
+			setOpen(false);
+			trigger.focus();
+		}
+	});
+
+	const options = panel.querySelectorAll<HTMLButtonElement>("[data-theme-option]");
+	const media = matchMedia("(prefers-color-scheme: dark)");
+	const stored = () => {
+		try {
+			return localStorage.getItem("theme") || "dark";
+		} catch {
+			return "dark";
+		}
+	};
+	function applyTheme(pref: string) {
+		document.documentElement.classList.toggle("dark", pref === "dark" || (pref === "system" && media.matches));
+		options.forEach((o) => o.setAttribute("aria-checked", String(o.dataset.themeOption === pref)));
+	}
+	options.forEach((o) =>
+		o.addEventListener("click", () => {
+			const pref = o.dataset.themeOption!;
+			try {
+				localStorage.setItem("theme", pref);
+			} catch {}
+			applyTheme(pref);
+		}),
+	);
+	media.addEventListener("change", () => stored() === "system" && applyTheme("system"));
+	applyTheme(stored());
+</script>
