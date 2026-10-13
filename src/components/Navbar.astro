@@ -2,11 +2,18 @@
 import FullLogo from "./FullLogo.astro";
 import { ui } from "../ui";
 
+const current = Astro.url.pathname.replace(/\.html$/, "").replace(/\/index$/, "/");
+const links = [
+	{ href: "/", label: ui.menu.connections },
+	{ href: "/anagrams", label: ui.menu.anagrams },
+];
 const themes = [
 	{ id: "light", label: ui.menu.light },
 	{ id: "dark", label: ui.menu.dark },
 	{ id: "system", label: ui.menu.system },
 ];
+const item =
+	"flex w-full items-baseline gap-3 px-3 py-2.5 text-base font-semibold text-left transition-colors hover:bg-fg hover:text-bg focus-visible:bg-fg focus-visible:text-bg focus-visible:outline-none";
 const chip =
 	"flex-1 border border-fg/30 px-2 py-1.5 text-center text-sm font-medium transition-colors hover:border-fg hover:bg-fg hover:text-bg";
 ---
@@ -17,6 +24,19 @@ const chip =
 			<FullLogo id="nav-logo" class="h-12 w-auto transition-transform duration-300 group-hover:scale-105" />
 			<span class="label hidden sm:inline">{ui.navTitle}</span>
 		</a>
+
+		<ul class="hidden lg:flex items-baseline gap-8 ml-auto">
+			{
+				links.map((l, i) => (
+					<li>
+						<a href={l.href} aria-current={l.href === current ? "page" : undefined} class="group flex items-baseline gap-1.5 text-[0.95rem] font-semibold">
+							<span class:list={["text-[0.7rem] tabular-nums transition-colors", l.href === current ? "text-blue" : "text-dim group-hover:text-blue"]}>0{i + 1}</span>
+							<span class:list={["border-b-2 pb-0.5 transition-colors", l.href === current ? "border-signal" : "border-transparent group-hover:border-blue"]}>{l.label}</span>
+						</a>
+					</li>
+				))
+			}
+		</ul>
 
 		<div class="relative" data-menu>
 			<button
@@ -32,6 +52,17 @@ const chip =
 				<svg data-icon-close class="hidden" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="square" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"></path></svg>
 			</button>
 			<div role="menu" data-menu-panel hidden class="absolute right-0 top-full mt-3 z-50 w-64 border border-fg bg-bg p-1.5 text-fg shadow-[5px_5px_0_var(--fg)]">
+				<div class="lg:hidden">
+					{
+						links.map((l, i) => (
+							<a role="menuitem" href={l.href} aria-current={l.href === current ? "page" : undefined} class={item}>
+								<span class:list={["text-xs tabular-nums", l.href === current ? "text-blue" : "text-dim"]}>0{i + 1}</span>
+								<span class:list={[l.href === current && "underline decoration-blue decoration-2 underline-offset-4"]}>{l.label}</span>
+							</a>
+						))
+					}
+					<div role="separator" class="my-1.5 h-px bg-rule"></div>
+				</div>
 				<p class="label px-3 pt-2 pb-2">{ui.menu.theme}</p>
 				<div class="flex gap-1 px-1 pb-1">
 					{

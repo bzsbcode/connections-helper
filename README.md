@@ -16,6 +16,10 @@ An unofficial helper, not affiliated with or endorsed by The New York Times.
 - **Workers KV** (binding `CACHE`) caches the puzzle (`puzzle:YYYY-MM-DD`, 36 hours, plus `puzzle:last` as a fallback) and each word's definitions (`def:<word>`, 30 days, or 1 hour if a dictionary failed). Upstream failures are remembered too, so the NYT and the dictionaries are never hammered.
 - "Today" is the date in Budapest. If the NYT has no puzzle for it yet, the previous day's is used; if the NYT is down, the last saved puzzle is shown with a note.
 
+## Anagrams page
+
+`/anagrams` is a single-word anagram solver for NYT Strands. Type some letters and it lists every word that uses all of them, then every word of four letters or more hidden in them (Strands' minimum). It is a plain static page: the [ENABLE](https://everything2.com/title/ENABLE+word+list) word list (public domain, 172,823 words) is served from `public/words/enable1.txt` (about 440 KB compressed) and searched in the browser by `src/lib/anagrams.ts`, so the worker and KV are not involved. The letters are kept in the address bar (`/anagrams?letters=strands`) so a search can be bookmarked.
+
 ## Run it locally
 
 Requires Node.js 22 or later. Every command works the same in PowerShell, cmd and bash.
@@ -51,4 +55,4 @@ The site sends `noindex` for now; `public/robots.txt` keeps crawlers out of `/ap
 
 ## Tests
 
-`npm test` covers the date logic, puzzle parsing (including a check that no grouping data survives), the worker's caching and fallbacks, and definition parsing, merging and de-duplication. Fixtures are in `test/fixtures` (see its README for where each came from).
+`npm test` covers the anagram solver (against the real ENABLE list), the date logic, puzzle parsing (including a check that no grouping data survives), the worker's caching and fallbacks, and definition parsing, merging and de-duplication. Fixtures are in `test/fixtures` (see its README for where each came from).

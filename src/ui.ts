@@ -4,7 +4,7 @@ export const ui = {
 	siteTitle: "Connections Helper by bzsbcode",
 	navTitle: "Connections Helper",
 	description: "Every meaning of every word in today's NYT Connections puzzle, without giving the groups away.",
-	menu: { open: "Menu", theme: "Theme", light: "Light", dark: "Dark", system: "System", skip: "Skip to content" },
+	menu: { open: "Menu", connections: "Connections", anagrams: "Anagrams", theme: "Theme", light: "Light", dark: "Dark", system: "System", skip: "Skip to content" },
 	footer: {
 		rights: "© 2026 bzsb_code.",
 		unofficial: "An unofficial helper. Not affiliated with or endorsed by The New York Times.",
@@ -43,10 +43,34 @@ export const ui = {
 		ctaText: "Head over to the official game and make your four.",
 		ctaButton: "Play Connections",
 	},
+	anagrams: {
+		title: "Anagrams",
+		description: "A single-word anagram solver for NYT Strands: every word that uses all your letters, and every word of four letters or more hidden in them.",
+		intro: "Type the letters you can see. You get every word that uses all of them, then every word of four letters or more hidden in them.",
+		wordList: "ENABLE word list",
+		wordCount: "172,823 words",
+		input: "Letters",
+		placeholder: "e.g. strands",
+		hint: "Type at least four letters.",
+		loading: "Loading the word list…",
+		loadError: "The word list couldn't be loaded.",
+		retry: "Try again",
+		exact: "Uses every letter",
+		letters: "letters",
+		none: "No words found.",
+		noExact: "No word uses all of these letters.",
+		more: (n: number) => `and ${n} more`,
+		count: (n: number) => (n === 1 ? "1 word" : `${n.toLocaleString("en-GB")} words`),
+		noscript: "The solver needs JavaScript, because the word list is searched in your browser.",
+		ctaTitle: "Got your theme?",
+		ctaText: "Back to the official game to trace the spangram.",
+		ctaButton: "Play Strands",
+	},
 	notFound: { title: "Page not found", home: "Today's words" },
 } as const;
 
-/** The official game. */
+/** The official games. */
 export const NYT_GAME_URL = "https://www.nytimes.com/games/connections";
+export const NYT_STRANDS_URL = "https://www.nytimes.com/games/strands";
 
 export const wiktionaryUrl = (word: string) => `https://en.wiktionary.org/wiki/Special:Search?search=${encodeURIComponent(word.toLowerCase())}`;
